@@ -9,6 +9,7 @@
 
 import { create } from "zustand";
 import { getAudioEngine } from "@/lib/audio/engine";
+import type { BinauralGeneratorConfig } from "@/lib/audio/binaural-generator";
 import type { PreparedSession } from "@/lib/audio/session-mixer";
 import type { VoiceCue } from "@/lib/audio/voice-catalog";
 
@@ -47,6 +48,8 @@ export interface AudioActions {
   setVolume: (volume: number) => void;
   /** Preload + start audio for a prepared session */
   startAudio: (prepared: PreparedSession, voiceCues: VoiceCue[]) => Promise<void>;
+  /** Start audio using local binaural generator (no network) */
+  startLocalAudio: (config: BinauralGeneratorConfig, voiceCues: VoiceCue[]) => void;
   /** Stop audio playback (full stop with fade-out) */
   stopAudio: () => Promise<void>;
   /** Pause audio playback */
@@ -142,6 +145,19 @@ export const useAudioStore = create<AudioStore>()((set, get) => ({
     } catch (err) {
       console.error("Failed to start audio:", err);
       set({ isPreloading: false });
+    }
+  },
+
+  startLocalAudio: (config, voiceCues) => {
+    if (!get().isInitialized) return;
+
+    try {
+      const engine = getAudioEngine();
+      engine.preloadLocal(config);
+      engine.start(voiceCues);
+      set({ isPlaying: true, isPaused: false });
+    } catch (err) {
+      console.error("Failed to start local audio:", err);
     }
   },
 

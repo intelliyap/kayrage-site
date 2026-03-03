@@ -11,6 +11,7 @@
  */
 
 import { SessionMixer, type PreparedSession, type SessionMixerCallbacks } from './session-mixer';
+import type { BinauralGeneratorConfig } from './binaural-generator';
 import type { VoiceCue } from './voice-catalog';
 
 // ---------------------------------------------------------------------------
@@ -107,7 +108,31 @@ export class AudioEngine {
   }
 
   /**
-   * Start playback. Must call preload() first.
+   * Preload using a local BinauralGenerator (no network required).
+   */
+  preloadLocal(config: BinauralGeneratorConfig): void {
+    if (!this.ctx || !this._initialised) {
+      throw new Error('AudioEngine.init() must be called before preloadLocal()');
+    }
+
+    // Create a fresh mixer for this session
+    this.mixer?.dispose();
+
+    const mixerCallbacks: SessionMixerCallbacks = {
+      onVoiceCueStart: (cue) => this.callbacks.onVoiceCueStart?.(cue),
+      onVoiceCueEnd: (cue) => this.callbacks.onVoiceCueEnd?.(cue),
+      onSessionEnd: () => {
+        this._playing = false;
+        this.callbacks.onSessionEnd?.();
+      },
+    };
+
+    this.mixer = new SessionMixer(this.ctx, mixerCallbacks);
+    this.mixer.preloadLocal(config);
+  }
+
+  /**
+   * Start playback. Must call preload() or preloadLocal() first.
    */
   start(voiceCues: VoiceCue[]): void {
     if (!this.mixer) {

@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,7 +93,7 @@ const defaultUser: UserProfile = {
   lastSessionAt: null,
   preferences: defaultPreferences,
   onboardingCompleted: false,
-  createdAt: new Date().toISOString(),
+  createdAt: "2024-01-01T00:00:00.000Z",
 };
 
 const initialState: UserState = {
@@ -125,116 +126,129 @@ function isConsecutiveDay(a: string, b: string): boolean {
 // Store
 // ---------------------------------------------------------------------------
 
-export const useUserStore = create<UserStore>()((set, get) => ({
-  ...initialState,
+export const useUserStore = create<UserStore>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
 
-  setUser: (user) => {
-    set({ user, isLoading: false });
-  },
-
-  updatePreferences: (prefs) => {
-    const user = get().user;
-    if (!user) return;
-    set({
-      user: {
-        ...user,
-        preferences: { ...user.preferences, ...prefs },
+      setUser: (user) => {
+        set({ user, isLoading: false });
       },
-    });
-  },
 
-  incrementSession: (minutes) => {
-    const user = get().user;
-    if (!user) return;
-    const now = new Date().toISOString();
-    set({
-      user: {
-        ...user,
-        totalSessions: user.totalSessions + 1,
-        totalMinutes: user.totalMinutes + minutes,
-        lastSessionAt: now,
+      updatePreferences: (prefs) => {
+        const user = get().user;
+        if (!user) return;
+        set({
+          user: {
+            ...user,
+            preferences: { ...user.preferences, ...prefs },
+          },
+        });
       },
-    });
-  },
 
-  updateStreak: () => {
-    const user = get().user;
-    if (!user) return;
-
-    const now = new Date().toISOString();
-
-    if (!user.lastSessionAt) {
-      // First ever session — start the streak
-      set({
-        user: {
-          ...user,
-          currentStreak: 1,
-          longestStreak: Math.max(user.longestStreak, 1),
-          lastSessionAt: now,
-        },
-      });
-      return;
-    }
-
-    if (isSameDay(user.lastSessionAt, now)) {
-      // Already practiced today — no streak change
-      return;
-    }
-
-    if (isConsecutiveDay(user.lastSessionAt, now)) {
-      // Consecutive day — increment streak
-      const newStreak = user.currentStreak + 1;
-      set({
-        user: {
-          ...user,
-          currentStreak: newStreak,
-          longestStreak: Math.max(user.longestStreak, newStreak),
-          lastSessionAt: now,
-        },
-      });
-    } else {
-      // Streak broken — reset to 1
-      set({
-        user: {
-          ...user,
-          currentStreak: 1,
-          lastSessionAt: now,
-        },
-      });
-    }
-  },
-
-  advanceLevel: (newLevel) => {
-    const user = get().user;
-    if (!user) return;
-    set({
-      user: {
-        ...user,
-        currentLevel: newLevel,
+      incrementSession: (minutes) => {
+        const user = get().user;
+        if (!user) return;
+        const now = new Date().toISOString();
+        set({
+          user: {
+            ...user,
+            totalSessions: user.totalSessions + 1,
+            totalMinutes: user.totalMinutes + minutes,
+            lastSessionAt: now,
+          },
+        });
       },
-    });
-  },
 
-  completeOnboarding: () => {
-    const user = get().user;
-    if (!user) return;
-    set({
-      user: {
-        ...user,
-        onboardingCompleted: true,
+      updateStreak: () => {
+        const user = get().user;
+        if (!user) return;
+
+        const now = new Date().toISOString();
+
+        if (!user.lastSessionAt) {
+          // First ever session — start the streak
+          set({
+            user: {
+              ...user,
+              currentStreak: 1,
+              longestStreak: Math.max(user.longestStreak, 1),
+              lastSessionAt: now,
+            },
+          });
+          return;
+        }
+
+        if (isSameDay(user.lastSessionAt, now)) {
+          // Already practiced today — no streak change
+          return;
+        }
+
+        if (isConsecutiveDay(user.lastSessionAt, now)) {
+          // Consecutive day — increment streak
+          const newStreak = user.currentStreak + 1;
+          set({
+            user: {
+              ...user,
+              currentStreak: newStreak,
+              longestStreak: Math.max(user.longestStreak, newStreak),
+              lastSessionAt: now,
+            },
+          });
+        } else {
+          // Streak broken — reset to 1
+          set({
+            user: {
+              ...user,
+              currentStreak: 1,
+              lastSessionAt: now,
+            },
+          });
+        }
       },
-    });
-  },
 
-  setLoading: (loading) => {
-    set({ isLoading: loading });
-  },
+      advanceLevel: (newLevel) => {
+        const user = get().user;
+        if (!user) return;
+        set({
+          user: {
+            ...user,
+            currentLevel: newLevel,
+          },
+        });
+      },
 
-  setHydrated: () => {
-    set({ isHydrated: true });
-  },
+      completeOnboarding: () => {
+        const user = get().user;
+        if (!user) return;
+        set({
+          user: {
+            ...user,
+            onboardingCompleted: true,
+          },
+        });
+      },
 
-  clearUser: () => {
-    set({ user: null, isLoading: false });
-  },
-}));
+      setLoading: (loading) => {
+        set({ isLoading: loading });
+      },
+
+      setHydrated: () => {
+        set({ isHydrated: true });
+      },
+
+      clearUser: () => {
+        set({ user: null, isLoading: false });
+      },
+    }),
+    {
+      name: "kayos-user",
+      version: 1,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ user: state.user }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated();
+      },
+    },
+  ),
+);
