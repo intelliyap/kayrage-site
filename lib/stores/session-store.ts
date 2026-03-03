@@ -151,7 +151,7 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
   },
 
   endSession: () => {
-    set({ isPlaying: false, isPaused: false });
+    set(initialState);
   },
 
   tick: (deltaSeconds) => {

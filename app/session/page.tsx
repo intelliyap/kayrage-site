@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { SessionPlayer } from "@/components/session/SessionPlayer";
 import { useSessionStore } from "@/lib/stores/session-store";
@@ -164,13 +164,13 @@ function SessionContent() {
     }
   };
 
-  const handleEnd = () => {
+  const handleEnd = useCallback(() => {
+    stopAudio();
     setShowRating(true);
-  };
+  }, [stopAudio]);
 
   const handleRatingSubmit = async () => {
     setDepthRating(rating);
-    await stopAudio();
 
     // Record session stats
     const sessionMinutes = plan ? Math.round(plan.duration / 60) : 0;
@@ -195,7 +195,7 @@ function SessionContent() {
 
   // Show session player when playing
   if (currentSession && !showRating) {
-    return <SessionPlayer />;
+    return <SessionPlayer onEnd={handleEnd} />;
   }
 
   // Depth rating after session
