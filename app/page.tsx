@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/Button";
 import { StateCheckIn } from "@/components/onboarding/StateCheckIn";
 import { useUserStore } from "@/lib/stores/user-store";
 import type { Mood, EnergyLevel } from "@/lib/ai/state-assessor";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -35,14 +34,9 @@ export default function HomePage() {
       <main className="min-h-dvh flex flex-col items-center justify-center px-6">
         <div className="max-w-sm w-full text-center space-y-8">
           <div>
-            <Image
-              src="/logos/wordmark.png"
-              alt="KAYRAGE"
-              width={240}
-              height={120}
-              className="mx-auto mb-2"
-              priority
-            />
+            <h1 className="font-mono text-2xl text-foreground tracking-wide mb-2">
+              KAY-OS
+            </h1>
             <p className="text-xs text-secondary tracking-[0.3em] uppercase">
               Internal Training
             </p>
@@ -73,17 +67,12 @@ export default function HomePage() {
     <main className="min-h-dvh flex flex-col px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-12">
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/logos/claw.png"
-            alt="KAYRAGE"
-            width={28}
-            height={28}
-          />
-          <span className="font-mono text-[10px] text-secondary tracking-widest">
+        <div>
+          <h1 className="font-mono text-lg text-foreground tracking-wide">KAY-OS</h1>
+          <p className="font-mono text-[10px] text-secondary tracking-widest">
             {levelNames[user.currentLevel] || "SYNC"}
-          </span>
-        </Link>
+          </p>
+        </div>
         <Link
           href="/dashboard"
           className="font-mono text-xs text-secondary hover:text-foreground tracking-widest transition-colors duration-300"

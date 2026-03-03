@@ -6,7 +6,6 @@ import { QuizFlow } from "@/components/onboarding/QuizFlow";
 import { AudioDemo } from "@/components/onboarding/AudioDemo";
 import { useUserStore } from "@/lib/stores/user-store";
 import { Button } from "@/components/ui/Button";
-import Image from "next/image";
 
 type Step = "welcome" | "how" | "quiz" | "demo" | "ready";
 
@@ -38,14 +37,9 @@ export default function OnboardingPage() {
       <div className="max-w-sm w-full">
         {step === "welcome" && (
           <div className="text-center space-y-6">
-            <Image
-              src="/logos/wordmark.png"
-              alt="KAYRAGE"
-              width={240}
-              height={120}
-              className="mx-auto"
-              priority
-            />
+            <h1 className="font-mono text-2xl text-foreground tracking-wide">
+              KAY-OS
+            </h1>
             <p className="text-sm text-secondary leading-relaxed">
               The US military studied consciousness technology for 20 years. We
               turned it into a training system.
