@@ -8,6 +8,7 @@ import { NeedGrid } from "@/components/browse/NeedGrid";
 import { MethodTabs } from "@/components/browse/MethodTabs";
 import { TechniqueCard } from "@/components/browse/TechniqueCard";
 import type { Method, NeedCategory } from "@/lib/techniques/types";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function BrowsePage() {
@@ -42,9 +43,9 @@ export default function BrowsePage() {
         </h1>
         <Link
           href="/"
-          className="font-mono text-xs text-secondary hover:text-foreground tracking-widest transition-colors duration-300"
+          className="hover:opacity-80 transition-opacity duration-300"
         >
-          HOME
+          <Image src="/logos/claw.png" alt="Home" width={24} height={24} />
         </Link>
       </div>
 
