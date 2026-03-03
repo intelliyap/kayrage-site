@@ -4,7 +4,6 @@ import { useUserStore } from "@/lib/stores/user-store";
 import { ProgressRing } from "@/components/dashboard/ProgressRing";
 import { StreakTracker } from "@/components/dashboard/StreakTracker";
 import { SessionHistory } from "@/components/dashboard/SessionHistory";
-import Image from "next/image";
 import Link from "next/link";
 
 const LEVEL_CONFIG: Record<
@@ -37,9 +36,9 @@ export default function DashboardPage() {
         <h1 className="font-mono text-lg text-foreground tracking-wide">Dashboard</h1>
         <Link
           href="/"
-          className="hover:opacity-80 transition-opacity duration-300"
+          className="font-mono text-xs text-secondary hover:text-foreground tracking-widest transition-colors duration-300"
         >
-          <Image src="/logos/claw.png" alt="Home" width={24} height={24} />
+          HOME
         </Link>
       </div>
 
