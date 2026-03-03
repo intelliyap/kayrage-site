@@ -80,10 +80,12 @@ export default function HomePage() {
       <div className="flex justify-between items-center mb-12">
         <div className="flex items-center gap-3">
           <KayrageLogo size={28} />
-          <h1 className="font-mono text-lg text-foreground tracking-wide">KAYRAGE</h1>
-          <p className="font-mono text-[10px] text-secondary tracking-widest">
-            {levelNames[user.currentLevel] || "SYNC"}
-          </p>
+          <div>
+            <h1 className="font-mono text-lg text-foreground tracking-wide">KAYRAGE</h1>
+            <p className="font-mono text-[10px] text-secondary tracking-widest">
+              {levelNames[user.currentLevel] || "SYNC"}
+            </p>
+          </div>
         </div>
         <Link
           href="/dashboard"
