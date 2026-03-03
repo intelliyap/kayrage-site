@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { useSessionStore } from "@/lib/stores/session-store";
 import { useAudioStore } from "@/lib/stores/audio-store";
 import { SessionTimer } from "./SessionTimer";
 import { GuidanceText } from "./GuidanceText";
 import { BreathPacer } from "./BreathPacer";
 import { AudioVisualizer } from "./AudioVisualizer";
-import { FocusLevelIndicator } from "./FocusLevelIndicator";
 import { Button } from "@/components/ui/Button";
 
-export function SessionPlayer() {
+interface SessionPlayerProps {
+  onEnd: () => void;
+}
+
+export function SessionPlayer({ onEnd }: SessionPlayerProps) {
   const {
     currentSession,
     isPlaying,
@@ -20,11 +23,13 @@ export function SessionPlayer() {
     activeGuidance,
     pauseSession,
     resumeSession,
-    endSession,
     tick,
   } = useSessionStore();
 
-  const { stopAudio, pauseAudio, resumeAudio } = useAudioStore();
+  const { pauseAudio, resumeAudio } = useAudioStore();
+
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Session timer
   useEffect(() => {
@@ -39,11 +44,20 @@ export function SessionPlayer() {
 
   // Auto-end session when duration reached
   useEffect(() => {
-    if (!currentSession || !isPlaying) return;
+    if (!currentSession || isPlaying) return;
+    // When tick() auto-stops playback (isPlaying becomes false, elapsed >= duration),
+    // trigger the end flow
     if (elapsed >= currentSession.duration) {
-      handleEnd();
+      onEnd();
     }
-  }, [elapsed, currentSession, isPlaying]);
+  }, [elapsed, currentSession, isPlaying, onEnd]);
+
+  // Cleanup confirm timer on unmount
+  useEffect(() => {
+    return () => {
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    };
+  }, []);
 
   const handlePause = useCallback(() => {
     pauseSession();
@@ -55,11 +69,20 @@ export function SessionPlayer() {
     resumeAudio();
   }, [resumeSession, resumeAudio]);
 
-  const handleEnd = useCallback(() => {
-    // stopAudio is now async (fade-out), fire and forget
-    stopAudio();
-    endSession();
-  }, [stopAudio, endSession]);
+  const handleEndTap = useCallback(() => {
+    if (confirmingEnd) {
+      // Second tap — confirm end
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      setConfirmingEnd(false);
+      onEnd();
+    } else {
+      // First tap — show confirmation
+      setConfirmingEnd(true);
+      confirmTimer.current = setTimeout(() => {
+        setConfirmingEnd(false);
+      }, 3000);
+    }
+  }, [confirmingEnd, onEnd]);
 
   if (!currentSession) return null;
 
@@ -80,11 +103,6 @@ export function SessionPlayer() {
 
       {/* Content overlay */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full px-8">
-        {/* Focus level */}
-        <div className="absolute top-8 left-8">
-          <FocusLevelIndicator level={currentSession.focusLevel} />
-        </div>
-
         {/* Timer */}
         <div className="absolute top-8 right-8">
           <SessionTimer elapsed={elapsed} total={currentSession.duration} />
@@ -126,8 +144,8 @@ export function SessionPlayer() {
               PAUSE
             </Button>
           )}
-          <Button variant="ghost" size="lg" onClick={handleEnd}>
-            END
+          <Button variant="ghost" size="lg" onClick={handleEndTap}>
+            {confirmingEnd ? "END?" : "END"}
           </Button>
         </div>
       </div>
