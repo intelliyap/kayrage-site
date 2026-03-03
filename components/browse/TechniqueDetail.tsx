@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { Technique } from "@/lib/techniques/types";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -23,6 +24,14 @@ const levelNames: Record<string, string> = {
 };
 
 export function TechniqueDetail({ technique }: TechniqueDetailProps) {
+  const router = useRouter();
+
+  const handleStart = () => {
+    router.push(
+      `/session?mood=neutral&energy=medium&time=${technique.minDuration}&technique=${technique.code}`,
+    );
+  };
+
   return (
     <div className="max-w-lg mx-auto px-6 py-8">
       {/* Back */}
@@ -74,7 +83,7 @@ export function TechniqueDetail({ technique }: TechniqueDetailProps) {
       </div>
 
       {/* Action */}
-      <Button size="lg" className="w-full">
+      <Button size="lg" className="w-full" onClick={handleStart}>
         START SESSION WITH {technique.code}
       </Button>
     </div>

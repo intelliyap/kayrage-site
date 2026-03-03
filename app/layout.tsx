@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: "KAY-OS",
   description: "Internal Training — Consciousness Technology",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

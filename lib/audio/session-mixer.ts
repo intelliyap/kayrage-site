@@ -10,8 +10,25 @@
  */
 
 import { BedPlayer } from './bed-player';
+import { BinauralGenerator, type BinauralGeneratorConfig } from './binaural-generator';
 import { VoicePlayer, type VoicePlayerCallbacks } from './voice-player';
 import type { VoiceCue } from './voice-catalog';
+
+// ---------------------------------------------------------------------------
+// BedSource — duck-typed union of BedPlayer and BinauralGenerator
+// ---------------------------------------------------------------------------
+
+export interface BedSource {
+  connectTo(destination: AudioNode): void;
+  play(): void;
+  pause(): void;
+  resume(): void;
+  stop(): void;
+  duck(targetGain: number, rampMs: number): void;
+  unduck(targetGain: number, rampMs: number): void;
+  dispose(): void;
+  get loaded(): boolean;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,7 +64,7 @@ const DEFAULT_MASTER_VOLUME = 0.45;
 export class SessionMixer {
   private ctx: AudioContext;
   private masterGain: GainNode;
-  private bedPlayer: BedPlayer;
+  private bedSource: BedSource;
   private voicePlayer: VoicePlayer;
   private callbacks: SessionMixerCallbacks;
   private _masterVolume = DEFAULT_MASTER_VOLUME;
@@ -66,19 +83,19 @@ export class SessionMixer {
     const voiceCallbacks: VoicePlayerCallbacks = {
       onCueStart: (cue) => {
         // Duck the bed
-        this.bedPlayer.duck(DUCK_GAIN, DUCK_RAMP_MS);
+        this.bedSource.duck(DUCK_GAIN, DUCK_RAMP_MS);
         this.callbacks.onVoiceCueStart?.(cue);
       },
       onCueEnd: (cue) => {
         // Unduck the bed
-        this.bedPlayer.unduck(1, UNDUCK_RAMP_MS);
+        this.bedSource.unduck(1, UNDUCK_RAMP_MS);
         this.callbacks.onVoiceCueEnd?.(cue);
       },
     };
 
     // Create players and route through master
-    this.bedPlayer = new BedPlayer(ctx);
-    this.bedPlayer.connectTo(this.masterGain);
+    this.bedSource = new BedPlayer(ctx);
+    this.bedSource.connectTo(this.masterGain);
 
     this.voicePlayer = new VoicePlayer(ctx, voiceCallbacks);
     this.voicePlayer.connectTo(this.masterGain);
@@ -89,15 +106,34 @@ export class SessionMixer {
   // -----------------------------------------------------------------------
 
   /**
-   * Preload the audio bed and voice cues.
+   * Preload the audio bed and voice cues (R2 / remote path).
    */
   async preload(prepared: PreparedSession): Promise<void> {
     if (this._disposed) return;
 
-    await Promise.all([
-      this.bedPlayer.load(prepared.bedUrl),
-      this.voicePlayer.preload(prepared.voiceCueUrls),
-    ]);
+    const loads: Promise<void>[] = [];
+    // BinauralGenerator has no load() — only call if present (BedPlayer)
+    if ('load' in this.bedSource) {
+      loads.push((this.bedSource as BedPlayer).load(prepared.bedUrl));
+    }
+    loads.push(this.voicePlayer.preload(prepared.voiceCueUrls));
+
+    await Promise.all(loads);
+  }
+
+  /**
+   * Set up a local BinauralGenerator as the bed source (no network).
+   */
+  preloadLocal(config: BinauralGeneratorConfig): void {
+    if (this._disposed) return;
+
+    // Dispose previous bed source
+    this.bedSource.dispose();
+
+    // Replace with binaural generator
+    const gen = new BinauralGenerator(this.ctx, config);
+    gen.connectTo(this.masterGain);
+    this.bedSource = gen;
   }
 
   /**
@@ -114,7 +150,7 @@ export class SessionMixer {
     );
 
     // Start bed playback
-    this.bedPlayer.play();
+    this.bedSource.play();
 
     // Schedule voice cues
     this.voicePlayer.schedule(voiceCues);
@@ -124,7 +160,7 @@ export class SessionMixer {
    * Pause both bed and voice playback.
    */
   pause(): void {
-    this.bedPlayer.pause();
+    this.bedSource.pause();
     this.voicePlayer.pause();
   }
 
@@ -132,7 +168,7 @@ export class SessionMixer {
    * Resume both bed and voice playback.
    */
   resume(): void {
-    this.bedPlayer.resume();
+    this.bedSource.resume();
     this.voicePlayer.resume();
   }
 
@@ -151,7 +187,7 @@ export class SessionMixer {
     // Wait for fade to complete
     await new Promise<void>((resolve) => {
       setTimeout(() => {
-        this.bedPlayer.stop();
+        this.bedSource.stop();
         this.voicePlayer.clearSchedule();
         this.callbacks.onSessionEnd?.();
         resolve();
@@ -187,7 +223,7 @@ export class SessionMixer {
    */
   dispose(): void {
     this._disposed = true;
-    this.bedPlayer.dispose();
+    this.bedSource.dispose();
     this.voicePlayer.dispose();
     this.masterGain.disconnect();
   }

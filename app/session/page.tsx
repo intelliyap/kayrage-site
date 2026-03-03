@@ -18,13 +18,12 @@ import { techniques } from "@/lib/techniques/library";
 import { Button } from "@/components/ui/Button";
 import type { Mood, EnergyLevel, StateAssessment } from "@/lib/ai/state-assessor";
 import type { SessionPlan } from "@/lib/ai/session-generator";
-import type { PreparedSession } from "@/lib/audio/session-mixer";
 import type { VoiceCue } from "@/lib/audio/voice-catalog";
 
 function SessionContent() {
   const searchParams = useSearchParams();
   const { currentSession, startSession, endSession, setDepthRating } = useSessionStore();
-  const { initAudio, startAudio, stopAudio, isInitialized, isPreloading } = useAudioStore();
+  const { initAudio, startAudio, startLocalAudio, stopAudio, isInitialized, isPreloading } = useAudioStore();
   const { user } = useUserStore();
   const [plan, setPlan] = useState<SessionPlan | null>(null);
   const [showRating, setShowRating] = useState(false);
@@ -52,6 +51,15 @@ function SessionContent() {
 
     const available = getAvailableTechniques(techniques, currentLevel, mode);
     const selection = selectTechniques(available, assessment, duration);
+
+    // If a specific technique was requested via query param, prepend it
+    const techniqueParam = searchParams.get("technique");
+    if (techniqueParam) {
+      const forced = techniques.find((t) => t.code === techniqueParam);
+      if (forced && !selection.techniques.some((t) => t.code === forced.code)) {
+        selection.techniques.unshift(forced);
+      }
+    }
 
     const guidanceDensity =
       currentLevel === "sync"
@@ -94,42 +102,60 @@ function SessionContent() {
         await initAudio();
       }
 
-      // 2. Call prepare-audio API to get bed URL + voice cues
-      const response = await fetch("/api/session/prepare-audio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: plan.mode,
-          profile: plan.activeProfile,
-          focusLevel: plan.focusLevel,
-          duration: plan.duration,
-          techniques: plan.techniques,
-          guidanceScript: plan.guidanceScript,
-        }),
-      });
+      // 2. Try remote prepare-audio API (R2 path)
+      let usedRemote = false;
+      try {
+        const response = await fetch("/api/session/prepare-audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: plan.mode,
+            profile: plan.activeProfile,
+            focusLevel: plan.focusLevel,
+            duration: plan.duration,
+            techniques: plan.techniques,
+            guidanceScript: plan.guidanceScript,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to prepare audio");
+        if (!response.ok) throw new Error("API returned " + response.status);
+
+        const data = await response.json();
+        const voiceCueUrls = new Map<string, string>(
+          Object.entries(data.voiceCueUrls as Record<string, string>),
+        );
+
+        startSession(plan);
+        await startAudio(
+          { bedUrl: data.bedUrl, voiceCues: data.voiceCues as VoiceCue[], voiceCueUrls },
+          data.voiceCues as VoiceCue[],
+        );
+        usedRemote = true;
+      } catch {
+        // Remote failed — fall back to local generation
+        console.log("Remote audio unavailable, falling back to local generation");
       }
 
-      const data = await response.json();
+      // 3. Fallback: local binaural generator + text-only voice cues
+      if (!usedRemote) {
+        const localVoiceCues: VoiceCue[] = plan.guidanceScript.map((g) => ({
+          time: g.time,
+          text: g.text,
+          displayDuration: g.duration,
+          r2Path: "",
+          audioDuration: 0,
+        }));
 
-      // 3. Build PreparedSession for the audio engine
-      const voiceCueUrls = new Map<string, string>(
-        Object.entries(data.voiceCueUrls as Record<string, string>),
-      );
-
-      const prepared: PreparedSession = {
-        bedUrl: data.bedUrl,
-        voiceCues: data.voiceCues as VoiceCue[],
-        voiceCueUrls,
-      };
-
-      // 4. Start session on session store
-      startSession(plan);
-
-      // 5. Preload + start audio
-      await startAudio(prepared, data.voiceCues as VoiceCue[]);
+        startSession(plan);
+        startLocalAudio(
+          {
+            binauralFreq: plan.audioConfig.binauralFreq,
+            carrier: plan.audioConfig.carrier,
+            noiseLevel: plan.audioConfig.noiseLevel,
+          },
+          localVoiceCues,
+        );
+      }
     } catch (err) {
       console.error("Failed to begin session:", err);
     } finally {
