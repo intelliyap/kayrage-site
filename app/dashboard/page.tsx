@@ -4,6 +4,7 @@ import { useUserStore } from "@/lib/stores/user-store";
 import { ProgressRing } from "@/components/dashboard/ProgressRing";
 import { StreakTracker } from "@/components/dashboard/StreakTracker";
 import { SessionHistory } from "@/components/dashboard/SessionHistory";
+import { techniques as techLib } from "@/lib/techniques/library";
 import Link from "next/link";
 
 const LEVEL_CONFIG: Record<
@@ -32,10 +33,42 @@ export default function DashboardPage() {
 
   const levelConfig = LEVEL_CONFIG[user.currentLevel] || LEVEL_CONFIG.sync;
 
+  // Use per-level session count for progress (not global totalSessions)
+  const currentLevelStats = user.levelStats?.[user.currentLevel];
+  const levelSessions = currentLevelStats?.sessionsCompleted ?? 0;
+
   const progress =
     levelConfig.sessionsToUnlock > 0
-      ? Math.min(1, user.totalSessions / levelConfig.sessionsToUnlock)
+      ? Math.min(1, levelSessions / levelConfig.sessionsToUnlock)
       : 1;
+
+  // Map session history to the format SessionHistory expects
+  const sessions = (user.sessionHistory ?? []).map((s) => ({
+    id: s.id,
+    mode: s.mode,
+    focusLevel: s.focusLevel,
+    techniques: s.techniques,
+    durationActual: s.durationActual,
+    depthRating: s.depthRating,
+    createdAt: s.completedAt,
+  }));
+
+  // Technique exposure: count unique methods explored
+  const allTechniquesUsed = new Set(
+    (user.sessionHistory ?? []).flatMap((s) => s.techniques),
+  );
+  const methodCounts: Record<string, { used: number; total: number }> = {};
+  for (const t of techLib) {
+    if (!methodCounts[t.method]) methodCounts[t.method] = { used: 0, total: 0 };
+    methodCounts[t.method].total++;
+    if (allTechniquesUsed.has(t.code)) methodCounts[t.method].used++;
+  }
+
+  // Depth trend: last 10 sessions
+  const depthTrend = (user.sessionHistory ?? [])
+    .slice(0, 10)
+    .reverse()
+    .map((s) => s.depthRating);
 
   return (
     <main className="min-h-dvh px-6 py-8 max-w-lg mx-auto">
@@ -57,7 +90,9 @@ export default function DashboardPage() {
           color={levelConfig.color}
           label={levelConfig.label}
           sublabel={
-            levelConfig.next ? `Next: ${levelConfig.next}` : "Maximum level"
+            levelConfig.next
+              ? `${levelSessions}/${levelConfig.sessionsToUnlock} → ${levelConfig.next}`
+              : "Maximum level"
           }
         />
       </div>
@@ -80,8 +115,65 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Session history (placeholder - would come from Supabase) */}
-      <SessionHistory sessions={[]} />
+      {/* Technique exposure */}
+      {Object.keys(methodCounts).length > 0 && (
+        <div className="mb-6">
+          <span className="block font-mono text-xs text-secondary tracking-widest mb-3">
+            TECHNIQUE EXPOSURE
+          </span>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(methodCounts).map(([method, counts]) => (
+              <div
+                key={method}
+                className="p-3 border border-border rounded-lg"
+              >
+                <span className="block font-mono text-[10px] text-muted tracking-widest mb-1">
+                  {method.toUpperCase()}
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1 bg-white/[0.04] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white/20 transition-all duration-500"
+                      style={{ width: `${(counts.used / counts.total) * 100}%` }}
+                    />
+                  </div>
+                  <span className="font-mono text-[10px] text-secondary">
+                    {counts.used}/{counts.total}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Depth trend */}
+      {depthTrend.length > 1 && (
+        <div className="mb-6">
+          <span className="block font-mono text-xs text-secondary tracking-widest mb-3">
+            DEPTH TREND
+          </span>
+          <div className="p-4 border border-border rounded-lg">
+            <div className="flex items-end gap-1 h-16">
+              {depthTrend.map((d, i) => (
+                <div
+                  key={i}
+                  className="flex-1 bg-white/10 rounded-t transition-all duration-300"
+                  style={{ height: `${(d / 10) * 100}%` }}
+                  title={`${d}/10`}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between mt-2">
+              <span className="font-mono text-[9px] text-muted">OLDEST</span>
+              <span className="font-mono text-[9px] text-muted">LATEST</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session history */}
+      <SessionHistory sessions={sessions} />
     </main>
   );
 }

@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="64" fill="#05050C"/>
+  <!-- Four diagonal claw slashes -->
+  <path d="M152 80 C154 78, 160 82, 158 88 L118 380 C116 390, 122 394, 124 386 L164 96 C166 86, 160 78, 152 80Z" fill="#DC2626"/>
+  <path d="M200 64 C202 62, 210 66, 208 74 L162 404 C160 414, 166 418, 168 408 L214 82 C216 72, 210 62, 200 64Z" fill="#DC2626"/>
+  <path d="M250 70 C252 68, 260 72, 258 80 L218 396 C216 406, 222 410, 224 400 L264 88 C266 78, 260 68, 250 70Z" fill="#DC2626"/>
+  <path d="M300 56 C302 54, 312 58, 310 66 L264 424 C262 436, 268 440, 270 430 L316 72 C318 62, 312 54, 300 56Z" fill="#DC2626"/>
+  <!-- Claw tip accents -->
+  <circle cx="120" cy="384" r="5" fill="#DC2626"/>
+  <circle cx="164" cy="408" r="5" fill="#DC2626"/>
+  <circle cx="220" cy="400" r="4.5" fill="#DC2626"/>
+  <circle cx="266" cy="428" r="6" fill="#DC2626"/>
+  <!-- KAYRAGE text -->
+  <text x="256" y="476" text-anchor="middle" fill="white" font-family="monospace" font-size="40" font-weight="500" letter-spacing="8">KAYRAGE</text>
+</svg>

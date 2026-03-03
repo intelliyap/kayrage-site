@@ -16,7 +16,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KAY-OS",
+  title: "KAYRAGE",
   description: "Internal Training — Consciousness Technology",
   manifest: "/manifest.json",
   icons: {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "KAY-OS",
+    title: "KAYRAGE",
   },
 };
 
@@ -49,6 +49,11 @@ export default function RootLayout({
         className={`${inter.variable} ${dmMono.variable} antialiased bg-background text-foreground min-h-dvh`}
       >
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"))`,
+          }}
+        />
       </body>
     </html>
   );
