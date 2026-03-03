@@ -48,7 +48,7 @@ components/
   session/              # SessionPlayer, BreathPacer, AudioVisualizer, etc.
   dashboard/            # ProgressRing, StreakTracker, SessionHistory
   onboarding/           # QuizFlow, AudioDemo, StateCheckIn
-  ui/                   # Button, KayrageLogo
+  ui/                   # Button
 
 lib/
   stores/               # Zustand stores (user, session, audio)
