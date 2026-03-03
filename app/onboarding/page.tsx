@@ -6,8 +6,6 @@ import { QuizFlow } from "@/components/onboarding/QuizFlow";
 import { AudioDemo } from "@/components/onboarding/AudioDemo";
 import { useUserStore } from "@/lib/stores/user-store";
 import { Button } from "@/components/ui/Button";
-import { KayrageLogo } from "@/components/ui/KayrageLogo";
-
 type Step = "welcome" | "how" | "quiz" | "demo" | "ready";
 
 export default function OnboardingPage() {
@@ -38,12 +36,9 @@ export default function OnboardingPage() {
       <div className="max-w-sm w-full">
         {step === "welcome" && (
           <div className="text-center space-y-6">
-            <div className="flex flex-col items-center">
-              <KayrageLogo size={56} className="mb-3" />
-              <h1 className="font-mono text-2xl text-foreground tracking-wide">
-                KAYRAGE
-              </h1>
-            </div>
+            <h1 className="font-mono text-2xl text-foreground tracking-wide">
+              KAYRAGE
+            </h1>
             <p className="text-sm text-secondary leading-relaxed">
               The US military studied consciousness technology for 20 years. We
               turned it into a training system.
