@@ -19,12 +19,13 @@ import { Button } from "@/components/ui/Button";
 import type { Mood, EnergyLevel, StateAssessment } from "@/lib/ai/state-assessor";
 import type { SessionPlan } from "@/lib/ai/session-generator";
 import type { VoiceCue } from "@/lib/audio/voice-catalog";
+import { checkNextLevelEligibility } from "@/lib/progression/criteria";
 
 function SessionContent() {
   const searchParams = useSearchParams();
   const { currentSession, startSession, endSession, setDepthRating } = useSessionStore();
   const { initAudio, startAudio, startLocalAudio, stopAudio, isInitialized, isPreloading } = useAudioStore();
-  const { user } = useUserStore();
+  const { user, incrementSession, updateStreak, advanceLevel } = useUserStore();
   const [plan, setPlan] = useState<SessionPlan | null>(null);
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(5);
@@ -170,6 +171,23 @@ function SessionContent() {
   const handleRatingSubmit = async () => {
     setDepthRating(rating);
     await stopAudio();
+
+    // Record session stats
+    const sessionMinutes = plan ? Math.round(plan.duration / 60) : 0;
+    incrementSession(sessionMinutes);
+    updateStreak();
+
+    // Check level progression
+    if (user) {
+      const result = checkNextLevelEligibility(user.currentLevel, {
+        sessionsCompleted: user.totalSessions + 1, // include this session
+        avgDepthRating: rating,
+      });
+      if (result?.eligibility.eligible) {
+        advanceLevel(result.nextLevel.id as Parameters<typeof advanceLevel>[0]);
+      }
+    }
+
     endSession();
     setShowRating(false);
     window.location.href = "/";

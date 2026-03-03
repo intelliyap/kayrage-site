@@ -10,7 +10,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   const router = useRouter();
-  const { user } = useUserStore();
+  const { user, isHydrated } = useUserStore();
   const [showCheckIn, setShowCheckIn] = useState(false);
 
   const handleCheckInComplete = (state: {
@@ -26,7 +26,16 @@ export default function HomePage() {
     router.push(`/session?${params.toString()}`);
   };
 
-  if (!user) return null;
+  // Wait for localStorage rehydration before rendering
+  if (!isHydrated || !user) {
+    return (
+      <main className="min-h-dvh flex items-center justify-center">
+        <span className="font-mono text-xs text-secondary tracking-widest animate-pulse">
+          LOADING...
+        </span>
+      </main>
+    );
+  }
 
   // Show onboarding for first-time users
   if (!user.onboardingCompleted) {
