@@ -7,6 +7,12 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import {
+  processSessionCompletion,
+  type CompletedSession,
+  type UserStats,
+} from "@/lib/progression/tracking";
+import type { FocusLevelId } from "@/lib/stores/user-types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,13 +22,33 @@ export type Tone = "direct" | "gentle" | "clinical";
 export type SessionLength = "short" | "medium" | "long";
 export type VoiceGender = "male" | "female";
 export type ActiveProfile = "drift" | "pulse" | "depth";
-export type FocusLevelId = "sync" | "edge" | "expand" | "void" | "bridge";
+export type { FocusLevelId };
 
 export interface UserPreferences {
   tone: Tone;
   sessionLength: SessionLength;
   voiceGender: VoiceGender;
   activeProfile: ActiveProfile;
+}
+
+/** Per-level stats for progression tracking */
+export interface LevelStatsEntry {
+  sessionsCompleted: number;
+  totalDepthRating: number;
+  avgDepthRating: number;
+  techniquesExplored: string[];
+}
+
+/** A completed session record for history display */
+export interface SessionHistoryEntry {
+  id: string;
+  mode: string;
+  focusLevel: string;
+  techniques: string[];
+  durationPlanned: number;
+  durationActual: number;
+  depthRating: number;
+  completedAt: string; // ISO 8601
 }
 
 export interface UserProfile {
@@ -37,6 +63,10 @@ export interface UserProfile {
   preferences: UserPreferences;
   onboardingCompleted: boolean;
   createdAt: string; // ISO 8601 timestamp
+  /** Per-level progression stats */
+  levelStats: Record<string, LevelStatsEntry>;
+  /** Completed session history (most recent first, capped at 50) */
+  sessionHistory: SessionHistoryEntry[];
 }
 
 export interface UserState {
@@ -53,10 +83,19 @@ export interface UserActions {
   setUser: (user: UserProfile | null) => void;
   /** Partially update user preferences */
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
-  /** Increment session count and total minutes after a completed session */
-  incrementSession: (minutes: number) => void;
-  /** Recalculate streak based on the current date and last session */
-  updateStreak: () => void;
+  /**
+   * Record a completed session: updates global counts, per-level stats,
+   * streak, level progression, and session history in one call.
+   */
+  recordSession: (session: {
+    mode: string;
+    focusLevel: string;
+    techniques: string[];
+    durationPlanned: number;
+    durationActual: number;
+    depthRating: number;
+    completed: boolean;
+  }) => { advanced: boolean; newLevel: string | null };
   /** Advance the user to a new focus level */
   advanceLevel: (newLevel: FocusLevelId) => void;
   /** Mark onboarding as completed */
@@ -94,6 +133,8 @@ const defaultUser: UserProfile = {
   preferences: defaultPreferences,
   onboardingCompleted: false,
   createdAt: "2024-01-01T00:00:00.000Z",
+  levelStats: {},
+  sessionHistory: [],
 };
 
 const initialState: UserState = {
@@ -115,12 +156,32 @@ function isSameDay(a: string, b: string): boolean {
 function isConsecutiveDay(a: string, b: string): boolean {
   const da = new Date(a);
   const db = new Date(b);
-  // Set both to start of UTC day, then compare
   da.setUTCHours(0, 0, 0, 0);
   db.setUTCHours(0, 0, 0, 0);
   const diff = db.getTime() - da.getTime();
-  return diff === 86_400_000; // exactly 24 hours
+  return diff === 86_400_000;
 }
+
+function updateStreak(user: UserProfile): Pick<UserProfile, "currentStreak" | "longestStreak"> {
+  const now = new Date().toISOString();
+
+  if (!user.lastSessionAt) {
+    return { currentStreak: 1, longestStreak: Math.max(user.longestStreak, 1) };
+  }
+
+  if (isSameDay(user.lastSessionAt, now)) {
+    return { currentStreak: user.currentStreak, longestStreak: user.longestStreak };
+  }
+
+  if (isConsecutiveDay(user.lastSessionAt, now)) {
+    const newStreak = user.currentStreak + 1;
+    return { currentStreak: newStreak, longestStreak: Math.max(user.longestStreak, newStreak) };
+  }
+
+  return { currentStreak: 1, longestStreak: user.longestStreak };
+}
+
+const MAX_HISTORY = 50;
 
 // ---------------------------------------------------------------------------
 // Store
@@ -146,87 +207,78 @@ export const useUserStore = create<UserStore>()(
         });
       },
 
-      incrementSession: (minutes) => {
+      recordSession: (session) => {
         const user = get().user;
-        if (!user) return;
+        if (!user) return { advanced: false, newLevel: null };
+
+        // Build UserStats from current profile for processSessionCompletion
+        const currentStats: UserStats = {
+          currentLevel: user.currentLevel,
+          totalSessions: user.totalSessions,
+          totalMinutes: user.totalMinutes,
+          levelStats: Object.fromEntries(
+            Object.entries(user.levelStats).map(([k, v]) => [
+              k,
+              { ...v, techniquesExplored: [...v.techniquesExplored] },
+            ]),
+          ),
+        };
+
+        const completedSession: CompletedSession = {
+          focusLevel: session.focusLevel,
+          durationActual: session.durationActual,
+          depthRating: session.depthRating,
+          techniques: session.techniques,
+          completed: session.completed,
+        };
+
+        const result = processSessionCompletion(completedSession, currentStats);
+        const streak = updateStreak(user);
         const now = new Date().toISOString();
+
+        // Build history entry
+        const historyEntry: SessionHistoryEntry = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          mode: session.mode,
+          focusLevel: session.focusLevel,
+          techniques: session.techniques,
+          durationPlanned: session.durationPlanned,
+          durationActual: session.durationActual,
+          depthRating: session.depthRating,
+          completedAt: now,
+        };
+
+        const newHistory = [historyEntry, ...user.sessionHistory].slice(0, MAX_HISTORY);
+
         set({
           user: {
             ...user,
-            totalSessions: user.totalSessions + 1,
-            totalMinutes: user.totalMinutes + minutes,
+            currentLevel: result.updatedStats.currentLevel as FocusLevelId,
+            totalSessions: result.updatedStats.totalSessions,
+            totalMinutes: result.updatedStats.totalMinutes,
+            levelStats: result.updatedStats.levelStats,
+            sessionHistory: newHistory,
             lastSessionAt: now,
+            ...streak,
           },
         });
-      },
 
-      updateStreak: () => {
-        const user = get().user;
-        if (!user) return;
-
-        const now = new Date().toISOString();
-
-        if (!user.lastSessionAt) {
-          // First ever session — start the streak
-          set({
-            user: {
-              ...user,
-              currentStreak: 1,
-              longestStreak: Math.max(user.longestStreak, 1),
-              lastSessionAt: now,
-            },
-          });
-          return;
-        }
-
-        if (isSameDay(user.lastSessionAt, now)) {
-          // Already practiced today — no streak change
-          return;
-        }
-
-        if (isConsecutiveDay(user.lastSessionAt, now)) {
-          // Consecutive day — increment streak
-          const newStreak = user.currentStreak + 1;
-          set({
-            user: {
-              ...user,
-              currentStreak: newStreak,
-              longestStreak: Math.max(user.longestStreak, newStreak),
-              lastSessionAt: now,
-            },
-          });
-        } else {
-          // Streak broken — reset to 1
-          set({
-            user: {
-              ...user,
-              currentStreak: 1,
-              lastSessionAt: now,
-            },
-          });
-        }
+        return {
+          advanced: result.advanced,
+          newLevel: result.newLevel?.id ?? null,
+        };
       },
 
       advanceLevel: (newLevel) => {
         const user = get().user;
         if (!user) return;
-        set({
-          user: {
-            ...user,
-            currentLevel: newLevel,
-          },
-        });
+        set({ user: { ...user, currentLevel: newLevel } });
       },
 
       completeOnboarding: () => {
         const user = get().user;
         if (!user) return;
-        set({
-          user: {
-            ...user,
-            onboardingCompleted: true,
-          },
-        });
+        set({ user: { ...user, onboardingCompleted: true } });
       },
 
       setLoading: (loading) => {
@@ -243,11 +295,22 @@ export const useUserStore = create<UserStore>()(
     }),
     {
       name: "kayos-user",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ user: state.user }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();
+      },
+      migrate: (persisted, version) => {
+        // v1 → v2: add levelStats and sessionHistory
+        if (version < 2) {
+          const state = persisted as { user?: Record<string, unknown> };
+          if (state.user) {
+            state.user.levelStats = state.user.levelStats ?? {};
+            state.user.sessionHistory = state.user.sessionHistory ?? [];
+          }
+        }
+        return persisted as UserStore;
       },
     },
   ),

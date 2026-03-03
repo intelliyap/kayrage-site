@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { StateCheckIn } from "@/components/onboarding/StateCheckIn";
 import { useUserStore } from "@/lib/stores/user-store";
 import type { Mood, EnergyLevel } from "@/lib/ai/state-assessor";
+import { KayrageLogo } from "@/components/ui/KayrageLogo";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -42,9 +43,10 @@ export default function HomePage() {
     return (
       <main className="min-h-dvh flex flex-col items-center justify-center px-6">
         <div className="max-w-sm w-full text-center space-y-8">
-          <div>
+          <div className="flex flex-col items-center">
+            <KayrageLogo size={64} className="mb-4" />
             <h1 className="font-mono text-2xl text-foreground tracking-wide mb-2">
-              KAY-OS
+              KAYRAGE
             </h1>
             <p className="text-xs text-secondary tracking-[0.3em] uppercase">
               Internal Training
@@ -76,8 +78,9 @@ export default function HomePage() {
     <main className="min-h-dvh flex flex-col px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-12">
-        <div>
-          <h1 className="font-mono text-lg text-foreground tracking-wide">KAY-OS</h1>
+        <div className="flex items-center gap-3">
+          <KayrageLogo size={28} />
+          <h1 className="font-mono text-lg text-foreground tracking-wide">KAYRAGE</h1>
           <p className="font-mono text-[10px] text-secondary tracking-widest">
             {levelNames[user.currentLevel] || "SYNC"}
           </p>

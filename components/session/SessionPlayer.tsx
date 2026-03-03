@@ -97,7 +97,7 @@ export function SessionPlayer({ onEnd }: SessionPlayerProps) {
     <div className="session-fullscreen flex flex-col items-center justify-center">
       {/* Visualizer background */}
       <AudioVisualizer
-        profile={currentSession.activeProfile || "drift"}
+        profile={currentSession.activeProfile || "still"}
         isPlaying={isPlaying && !isPaused}
       />
 

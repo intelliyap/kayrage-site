@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KAYRAGE
+
+AI-powered consciousness training platform. Combines binaural audio entrainment, ancient meditation techniques, and AI-guided sessions into a daily practice.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **State**: Zustand v5 with localStorage persistence
+- **Database**: Supabase (Postgres + Auth + RLS)
+- **Audio**: Web Audio API (binaural generator, bed player, voice cues)
+- **Styling**: Tailwind CSS v4, DM Mono + Inter fonts
+- **Deployment**: Docker → Traefik on self-hosted VPS
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app works fully offline without any external dependencies. Supabase and R2 audio are optional enhancements.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | No | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Supabase anonymous key |
+| `ANTHROPIC_API_KEY` | No | For AI session generation (falls back to local) |
+| `ELEVENLABS_API_KEY` | No | For voice cue synthesis |
+| `R2_BUCKET_URL` | No | Cloudflare R2 for pre-rendered audio beds |
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/                    # Next.js App Router pages
+  page.tsx              # Home — check-in → session
+  session/page.tsx      # Session lifecycle (plan → play → rate)
+  dashboard/page.tsx    # Stats, progression, history
+  onboarding/page.tsx   # First-time user flow
+  browse/               # Technique library browser
+  api/                  # API routes (session gen, audio prep, voice synth)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+components/
+  session/              # SessionPlayer, BreathPacer, AudioVisualizer, etc.
+  dashboard/            # ProgressRing, StreakTracker, SessionHistory
+  onboarding/           # QuizFlow, AudioDemo, StateCheckIn
+  ui/                   # Button, KayrageLogo
 
-## Deploy on Vercel
+lib/
+  stores/               # Zustand stores (user, session, audio)
+  ai/                   # State assessor, technique selector, script writer
+  audio/                # Audio engine, binaural generator, bed/voice players
+  techniques/           # 49-technique library with metadata
+  progression/          # Focus levels, unlock criteria, session tracking
+  supabase/             # Client, types, migrations
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+tests/                  # Vitest tests
+scripts/generate/       # Offline audio bed rendering pipeline
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Focus Levels
+
+| Level | Focus # | Description |
+|-------|---------|-------------|
+| Sync | 3 | Foundation — breath and basic awareness |
+| The Edge | 10 | Borderland between waking and sleep |
+| Expand | 12 | Perception beyond normal boundaries |
+| Void | 15 | No-thought awareness |
+| Bridge | 21 | Invite-only — uncharted territory |
+
+## Scripts
+
+```bash
+npm run dev          # Development server
+npm run build        # Production build
+npm run test         # Run tests
+npm run test:watch   # Tests in watch mode
+npm run lint         # ESLint
+```
+
+## Docker
+
+```bash
+docker build -t kayrage-site .
+docker run -p 3000:3000 kayrage-site
+```
+
+Image auto-published as `dddd4444/kayrage-site:latest` via CI.

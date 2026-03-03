@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from "react";
 
 interface AudioVisualizerProps {
-  profile: "drift" | "pulse" | "depth";
+  profile: "drift" | "pulse" | "depth" | "still";
   isPlaying: boolean;
 }
 
@@ -11,6 +11,7 @@ const COLORS = {
   drift: { r: 167, g: 139, b: 250 }, // #A78BFA
   pulse: { r: 96, g: 165, b: 250 }, // #60A5FA
   depth: { r: 52, g: 211, b: 153 }, // #34D399
+  still: { r: 180, g: 180, b: 200 }, // cool grey-blue
 };
 
 interface Particle {
@@ -66,7 +67,7 @@ export function AudioVisualizer({ profile, isPlaying }: AudioVisualizerProps) {
     window.addEventListener("resize", resize);
 
     // Initialize particles
-    const count = profile === "pulse" ? 80 : profile === "drift" ? 120 : 60;
+    const count = profile === "still" ? 40 : profile === "pulse" ? 80 : profile === "drift" ? 120 : 60;
     particlesRef.current = Array.from({ length: count }, () =>
       createParticle(canvas.width, canvas.height)
     );
@@ -124,6 +125,12 @@ export function AudioVisualizer({ profile, isPlaying }: AudioVisualizerProps) {
           p.vy += (dy / (dist || 1)) * pulseForce;
           p.vx *= 0.96;
           p.vy *= 0.96;
+        } else if (profile === "still") {
+          // Still: minimal, almost stationary, gentle drift
+          p.vx += (Math.random() - 0.5) * 0.003;
+          p.vy += (Math.random() - 0.5) * 0.003;
+          p.vx *= 0.99;
+          p.vy *= 0.99;
         } else {
           // Depth: slow nebula drift
           p.vx += (Math.random() - 0.5) * 0.01;

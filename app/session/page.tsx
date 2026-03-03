@@ -14,22 +14,22 @@ import {
 } from "@/lib/ai/state-assessor";
 import { selectTechniques, getAvailableTechniques } from "@/lib/ai/technique-selector";
 import { generateLocalScript } from "@/lib/ai/script-writer";
-import { techniques } from "@/lib/techniques/library";
+import { techniques, techniqueMap } from "@/lib/techniques/library";
 import { Button } from "@/components/ui/Button";
 import type { Mood, EnergyLevel, StateAssessment } from "@/lib/ai/state-assessor";
 import type { SessionPlan } from "@/lib/ai/session-generator";
 import type { VoiceCue } from "@/lib/audio/voice-catalog";
-import { checkNextLevelEligibility } from "@/lib/progression/criteria";
 
 function SessionContent() {
   const searchParams = useSearchParams();
-  const { currentSession, startSession, endSession, setDepthRating } = useSessionStore();
+  const { currentSession, startSession, endSession, elapsed, setDepthRating } = useSessionStore();
   const { initAudio, startAudio, startLocalAudio, stopAudio, isInitialized, isPreloading } = useAudioStore();
-  const { user, incrementSession, updateStreak, advanceLevel } = useUserStore();
+  const { user, recordSession } = useUserStore();
   const [plan, setPlan] = useState<SessionPlan | null>(null);
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(5);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [showHeadphonePrompt, setShowHeadphonePrompt] = useState(false);
 
   const currentLevel = user?.currentLevel ?? "sync";
 
@@ -92,9 +92,14 @@ function SessionContent() {
     setPlan(sessionPlan);
   }, [searchParams, currentLevel]);
 
+  const handleRequestBegin = () => {
+    if (!plan) return;
+    setShowHeadphonePrompt(true);
+  };
+
   const handleBegin = async () => {
     if (!plan) return;
-
+    setShowHeadphonePrompt(false);
     setIsPreparing(true);
 
     try {
@@ -169,24 +174,21 @@ function SessionContent() {
     setShowRating(true);
   }, [stopAudio]);
 
-  const handleRatingSubmit = async () => {
+  const handleRatingSubmit = () => {
+    if (!plan) return;
+
     setDepthRating(rating);
 
-    // Record session stats
-    const sessionMinutes = plan ? Math.round(plan.duration / 60) : 0;
-    incrementSession(sessionMinutes);
-    updateStreak();
-
-    // Check level progression
-    if (user) {
-      const result = checkNextLevelEligibility(user.currentLevel, {
-        sessionsCompleted: user.totalSessions + 1, // include this session
-        avgDepthRating: rating,
-      });
-      if (result?.eligibility.eligible) {
-        advanceLevel(result.nextLevel.id as Parameters<typeof advanceLevel>[0]);
-      }
-    }
+    // Record session with proper per-level tracking and progression
+    recordSession({
+      mode: plan.mode,
+      focusLevel: plan.focusLevel,
+      techniques: plan.techniques,
+      durationPlanned: plan.duration,
+      durationActual: elapsed || plan.duration,
+      depthRating: rating,
+      completed: true,
+    });
 
     endSession();
     setShowRating(false);
@@ -232,6 +234,33 @@ function SessionContent() {
     );
   }
 
+  // Headphone recommendation
+  if (showHeadphonePrompt) {
+    return (
+      <main className="min-h-dvh flex flex-col items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center space-y-8">
+          <div className="text-4xl">🎧</div>
+          <h2 className="font-mono text-lg text-foreground">Headphones Recommended</h2>
+          <p className="text-xs text-secondary leading-relaxed">
+            Binaural beats require stereo headphones to work. For the best experience,
+            put on headphones before starting.
+          </p>
+          <div className="space-y-3">
+            <Button size="lg" className="w-full" onClick={handleBegin}>
+              I&apos;M READY
+            </Button>
+            <button
+              onClick={() => setShowHeadphonePrompt(false)}
+              className="font-mono text-xs text-secondary hover:text-foreground tracking-widest transition-colors duration-300 cursor-pointer"
+            >
+              BACK
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   // Preparing state
   if (isPreparing || isPreloading) {
     return (
@@ -272,22 +301,30 @@ function SessionContent() {
           <span className="font-mono text-[10px] text-muted tracking-widest">
             TECHNIQUES
           </span>
-          {plan.techniques.map((code, i) => (
-            <div
-              key={code}
-              className="flex items-center gap-3 p-3 border border-border rounded-md"
-            >
-              <span className="font-mono text-[10px] text-muted">{i + 1}</span>
-              <span className="font-mono text-xs text-foreground">{code}</span>
-            </div>
-          ))}
+          {plan.techniques.map((code, i) => {
+            const tech = techniqueMap[code];
+            return (
+              <div
+                key={code}
+                className="flex items-center gap-3 p-3 border border-border rounded-md"
+              >
+                <span className="font-mono text-[10px] text-muted">{i + 1}</span>
+                <div>
+                  <span className="font-mono text-xs text-foreground block">
+                    {tech?.name ?? code}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted">{code}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Reasoning */}
         <p className="text-xs text-secondary leading-relaxed">{plan.reasoning}</p>
 
         {/* Begin */}
-        <Button size="lg" className="w-full" onClick={handleBegin}>
+        <Button size="lg" className="w-full" onClick={handleRequestBegin}>
           BEGIN
         </Button>
       </div>
