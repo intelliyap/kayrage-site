@@ -1,65 +1,137 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { StateCheckIn } from "@/components/onboarding/StateCheckIn";
+import { useUserStore } from "@/lib/stores/user-store";
+import type { Mood, EnergyLevel } from "@/lib/ai/state-assessor";
+import Link from "next/link";
+
+export default function HomePage() {
+  const router = useRouter();
+  const { user } = useUserStore();
+  const [showCheckIn, setShowCheckIn] = useState(false);
+
+  const handleCheckInComplete = (state: {
+    mood: Mood;
+    energy: EnergyLevel;
+    timeAvailable: number;
+  }) => {
+    const params = new URLSearchParams({
+      mood: state.mood,
+      energy: state.energy,
+      time: state.timeAvailable.toString(),
+    });
+    router.push(`/session?${params.toString()}`);
+  };
+
+  if (!user) return null;
+
+  // Show onboarding for first-time users
+  if (!user.onboardingCompleted) {
+    return (
+      <main className="min-h-dvh flex flex-col items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center space-y-8">
+          <div>
+            <h1 className="font-mono text-2xl text-foreground tracking-wide mb-2">
+              KAY-OS
+            </h1>
+            <p className="text-xs text-secondary tracking-[0.3em] uppercase">
+              Internal Training
+            </p>
+          </div>
+
+          <p className="text-sm text-secondary leading-relaxed">
+            The US military studied consciousness technology for 20 years. We
+            turned it into a training system.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+          <Button size="lg" className="w-full" onClick={() => router.push("/onboarding")}>
+            BEGIN
+          </Button>
         </div>
       </main>
+    );
+  }
+
+  const levelNames: Record<string, string> = {
+    sync: "Sync",
+    edge: "The Edge",
+    expand: "Expand",
+    void: "Void",
+    bridge: "Bridge",
+  };
+
+  return (
+    <main className="min-h-dvh flex flex-col px-6 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-12">
+        <div>
+          <h1 className="font-mono text-lg text-foreground tracking-wide">KAY-OS</h1>
+          <p className="font-mono text-[10px] text-secondary tracking-widest">
+            {levelNames[user.currentLevel] || "SYNC"}
+          </p>
+        </div>
+        <Link
+          href="/dashboard"
+          className="font-mono text-xs text-secondary hover:text-foreground tracking-widest transition-colors duration-300"
+        >
+          PROFILE
+        </Link>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
+        {!showCheckIn ? (
+          <div className="space-y-6 text-center">
+            {/* Stats */}
+            <div className="flex justify-center gap-8 mb-8">
+              <Stat label="SESSIONS" value={user.totalSessions.toString()} />
+              <Stat label="MINUTES" value={user.totalMinutes.toString()} />
+              <Stat label="STREAK" value={user.currentStreak.toString()} />
+            </div>
+
+            {/* Primary CTA */}
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => setShowCheckIn(true)}
+            >
+              START SESSION
+            </Button>
+
+            {/* Browse */}
+            <Link
+              href="/browse"
+              className="block font-mono text-xs text-secondary hover:text-foreground tracking-widest transition-colors duration-300 mt-4"
+            >
+              BROWSE TECHNIQUES
+            </Link>
+          </div>
+        ) : (
+          <div>
+            <button
+              onClick={() => setShowCheckIn(false)}
+              className="font-mono text-xs text-secondary hover:text-foreground tracking-widest mb-6 transition-colors duration-300 cursor-pointer"
+            >
+              BACK
+            </button>
+            <StateCheckIn onComplete={handleCheckInComplete} />
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-center">
+      <span className="block font-mono text-xl text-foreground">{value}</span>
+      <span className="block font-mono text-[10px] text-muted tracking-widest mt-1">
+        {label}
+      </span>
     </div>
   );
 }

@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #05050C;
+  --foreground: #E5E7EB;
+  --text-secondary: #4B5563;
+  --text-muted: #2A2A3A;
+  --border: rgba(255, 255, 255, 0.024);
+  --accent-drift: #A78BFA;
+  --accent-pulse: #60A5FA;
+  --accent-depth: #34D399;
+  --accent-level: #FBBF24;
+  --accent-warning: #EF4444;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-drift: var(--accent-drift);
+  --color-pulse: var(--accent-pulse);
+  --color-depth: var(--accent-depth);
+  --color-level: var(--accent-level);
+  --color-warning: var(--accent-warning);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-dm-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Guidance text style */
+.guidance-text {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.8;
+}
+
+/* Slow, eased transitions */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 2px;
+}
+
+/* Session fullscreen mode */
+.session-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--background);
+  overflow: hidden;
+}
+
+/* Breath pacer animation */
+@keyframes breathe-in {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes breathe-out {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.6); opacity: 0.4; }
+}
+
+@keyframes fade-guidance {
+  0% { opacity: 0; transform: translateY(8px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
+/* Pulse ring for level indicator */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0.3; }
+  100% { transform: scale(1); opacity: 0.6; }
 }
