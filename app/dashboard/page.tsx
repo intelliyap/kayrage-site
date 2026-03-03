@@ -18,9 +18,17 @@ const LEVEL_CONFIG: Record<
 };
 
 export default function DashboardPage() {
-  const { user } = useUserStore();
+  const { user, isHydrated } = useUserStore();
 
-  if (!user) return null;
+  if (!isHydrated || !user) {
+    return (
+      <main className="min-h-dvh flex items-center justify-center">
+        <span className="font-mono text-xs text-secondary tracking-widest animate-pulse">
+          LOADING...
+        </span>
+      </main>
+    );
+  }
 
   const levelConfig = LEVEL_CONFIG[user.currentLevel] || LEVEL_CONFIG.sync;
 
