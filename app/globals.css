@@ -1,16 +1,20 @@
 @import "tailwindcss";
 
+/* Brand base (kayrage.com parity): ink ground, paper text, red as the
+   brand accent. The session-mode accents (drift/pulse/depth/level) keep
+   their functional hues — they encode state, not brand. */
 :root {
-  --background: #05050C;
-  --foreground: #E5E7EB;
-  --text-secondary: #4B5563;
-  --text-muted: #2A2A3A;
-  --border: rgba(255, 255, 255, 0.024);
+  --background: #17150F;       /* ink */
+  --foreground: #F6F4EE;       /* paper */
+  --text-secondary: #9A9483;   /* dark-meta */
+  --text-muted: #6B665A;       /* dark-meta-2 */
+  --border: rgba(246, 244, 238, 0.06);
+  --accent-brand: #B32017;     /* the red — punctuation, not paint */
   --accent-drift: #A78BFA;
   --accent-pulse: #60A5FA;
   --accent-depth: #34D399;
   --accent-level: #FBBF24;
-  --accent-warning: #EF4444;
+  --accent-warning: #B32017;
 }
 
 @theme inline {
@@ -19,13 +23,15 @@
   --color-secondary: var(--text-secondary);
   --color-muted: var(--text-muted);
   --color-border: var(--border);
+  --color-brand: var(--accent-brand);
   --color-drift: var(--accent-drift);
   --color-pulse: var(--accent-pulse);
   --color-depth: var(--accent-depth);
   --color-level: var(--accent-level);
   --color-warning: var(--accent-warning);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-dm-mono);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
+  --font-serif: var(--font-caslon);
 }
 
 body {
@@ -36,10 +42,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Guidance text style */
+/* Guidance text style — Caslon italic, the brand's spoken voice */
 .guidance-text {
-  font-family: var(--font-sans);
-  font-weight: 300;
+  font-family: var(--font-caslon), Georgia, serif;
+  font-weight: 400;
   font-style: italic;
   line-height: 1.8;
 }

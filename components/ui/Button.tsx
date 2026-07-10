@@ -35,7 +35,7 @@ const accentStyles: Record<string, string> = {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = "primary", size = "md", accent, className = "", ...props }, ref) => {
     const base =
-      "inline-flex items-center justify-center font-mono tracking-wide rounded-lg transition-all duration-300 disabled:opacity-30 disabled:pointer-events-none cursor-pointer";
+      "inline-flex items-center justify-center font-mono tracking-wide rounded-none transition-all duration-300 disabled:opacity-30 disabled:pointer-events-none cursor-pointer";
 
     const style = accent
       ? accentStyles[accent]

@@ -1,17 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, DM_Mono } from "next/font/google";
+import { Archivo, IBM_Plex_Mono, Libre_Caslon_Text } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+// Brand type system (kayrage.com parity): Archivo carries UI + display,
+// IBM Plex Mono carries metas/labels, Caslon italic carries guidance text.
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
   display: "swap",
 });
 
-const dmMono = DM_Mono({
-  variable: "--font-dm-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
+  display: "swap",
+});
+
+const caslon = Libre_Caslon_Text({
+  variable: "--font-caslon",
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -31,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#05050C",
+  themeColor: "#17150F",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -46,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${inter.variable} ${dmMono.variable} antialiased bg-background text-foreground min-h-dvh`}
+        className={`${archivo.variable} ${plexMono.variable} ${caslon.variable} antialiased bg-background text-foreground min-h-dvh`}
       >
         {children}
         <script
